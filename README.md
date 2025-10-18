@@ -27,7 +27,7 @@
 | Wan2.2-S2V-14B | 未验证⏳ | / |
 
 ## 4. 未来支持/适配
-### 4.1. 基础功能适配 - [基础功能 Patch](./diffsynth_npu/patch/base_patch.py)
+### 4.1. 基础功能适配
 | 功能名称 | 状态 | 路径 |
 | - | - | - |
 | xDiT 并行 | 已适配✅ | [distributed](./diffsynth_npu/utils/distributed) |
