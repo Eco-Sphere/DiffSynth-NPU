@@ -4,7 +4,20 @@ Wan 是由阿里巴巴通义实验室开源的一系列视频生成模型。
 
 ## 安装
 
+### 1. 安装 DiffSynth-Studio & DiffSynth-NPU
 在使用本系列模型之前，请确保已安装diffsyth-studio与diffsynth-npu
+- [DiffSynth-Studio](https://github.com/modelscope/DiffSynth-Studio)
+- [DiffSynth-NPU](https://gitcode.com/zt0303003/DiffSynth-NPU)
+
+### 2. 安装依赖
+```shell
+# 若环境镜像中没有gcc、g++，请用户自行安装
+yum install gcc
+yum install g++
+
+# 导入头文件路径
+export CPLUS_INCLUDE_PATH=/usr/include/c++/12/:/usr/include/c++/12/aarch64-openEuler-linux/:$CPLUS_INCLUDE_PATH
+```
 
 ## 快速开始
 

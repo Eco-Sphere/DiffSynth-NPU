@@ -68,29 +68,21 @@ def patch_initialize_usp():
     WanVideoPipeline.initialize_usp = patched_initialize_usp
     logging.info("[NPU Patch] WanVideoPipeline.initialize_usp has been patched to use NPU-only implementation")
 
-def patch_pad_freqs():
+def patch_torch_ones():
     """
-    Monkey Patch xdit_context_parallel.pad_freqs
-    """
-    from diffsynth.distributed import xdit_context_parallel
-    
-    def patched_pad_freqs(original_tensor, target_len):
-        seq_len, s1, s2 = original_tensor.shape
-        pad_size = target_len - seq_len
-
-        # 若 pad_size 为 0，则直接返回 original_tensor，跳过组batch环节
-        if pad_size == 0:
-            return original_tensor
-        padding_tensor = torch.ones(
-            pad_size,
-            s1,
-            s2,
-            dtype=torch.float32,
-            device=original_tensor.device)
-        padded_tensor = torch.cat([original_tensor, padding_tensor], dim=0)
-        return padded_tensor
-    xdit_context_parallel.pad_freqs = patched_pad_freqs
-    logging.info("[NPU Patch] xdit_context_parallel.pad_freqs has been patched to use NPU-only implementation")
+    Monkey patch torch.ones to use tensors supported by NPU
+    """ 
+    original_torch_ones = torch.ones
+    def patched_torch_ones(*args, **kwargs):
+        if "dtype" not in kwargs:
+            return original_torch_ones(*args, **kwargs)
+        else:
+            cur_dtype = kwargs["dtype"]
+            if cur_dtype in [torch.float64, torch.complex128, torch.complex64, torch.complex32]:
+                kwargs["dtype"] = torch.float32
+            return original_torch_ones(*args, **kwargs)
+    torch.ones = patched_torch_ones
+    logging.info("[NPU Patch] torch.ones has been patched to use tensors supported on NPU")
 
 def patch_torch_float64_to_float32():
     """

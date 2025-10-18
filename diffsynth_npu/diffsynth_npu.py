@@ -25,13 +25,13 @@ def patch_features():
     from diffsynth_npu.patch.base_patch import (
         patch_xfusers_imports,
         patch_initialize_usp,
-        patch_pad_freqs,
+        patch_torch_ones,
         patch_torch_float64_to_float32,
         patch_tensor_double_to_float32
     )
     patch_xfusers_imports()
     patch_initialize_usp()
-    patch_pad_freqs()
+    patch_torch_ones()
     patch_torch_float64_to_float32()
     patch_tensor_double_to_float32()
 
