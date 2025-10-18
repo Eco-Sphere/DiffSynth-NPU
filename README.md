@@ -1,4 +1,4 @@
-# Ascend Extension for DiffSynth
+# Ascend Extension for DiffSynth-Studio
 
 ## 1. 简介
 
