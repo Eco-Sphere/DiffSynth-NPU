@@ -1,0 +1,16 @@
+__pycache__/
+kernel_meta/
+prof*/
+*.egg-info
+*.mp4
+*.jpg
+*.png
+models/
+*.msc
+*.mv
+fusion_result.json
+*.log
+*.tar.gz
+extra-info/
+*.MP3
+*test.py
