@@ -49,9 +49,9 @@ save_video(video, "video1.mp4", fps=15, quality=5)
     - [Wan2.1-VACE-14B-Ascend.py](../Wan2.1-VACE-14B-Ascend.py)
     - [start_test.sh](../start_test.sh)
 2. 运行方式：
-```shell
-bash start_test.sh
-```
+    ```shell
+    bash start_test.sh
+    ```
 
 ## 模型推理
 
