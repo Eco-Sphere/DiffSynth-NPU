@@ -8,12 +8,12 @@ def patch_xfusers_imports():
     Monkey Patch xfuser.core.distributed and xfuser.core.long_ctx_attention
     """
     import diffsynth.pipelines.wan_video_new as wan_video_module
-    from diffsynth.npu_utils.distributed.parallel_mgr import (
+    from diffsynth_npu.utils.distributed.parallel_mgr import (
         get_sequence_parallel_rank,
         get_sequence_parallel_world_size,
         get_sp_group
     )
-    from diffsynth.npu_utils.modules.attn_layer import xFuserLongContextAttention
+    from diffsynth_npu.utils.modules.attn_layer import xFuserLongContextAttention
     
     wan_video_module.get_sequence_parallel_rank = get_sequence_parallel_rank
     wan_video_module.get_sequence_parallel_world_size = get_sequence_parallel_world_size
@@ -46,7 +46,7 @@ def patch_initialize_usp():
     Monkey Patch WanVideoPipeline.initialize_usp
     """
     from diffsynth.pipelines.wan_video_new import WanVideoPipeline
-    from diffsynth.npu_utils.distributed.parallel_mgr import init_parallel_env, ParallelConfig
+    from diffsynth_npu.utils.distributed.parallel_mgr import init_parallel_env, ParallelConfig
     
     def patched_initialize_usp(self):
         dist.init_process_group(backend="hccl", init_method="env://")
