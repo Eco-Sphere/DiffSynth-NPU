@@ -1,7 +1,7 @@
 diffsynth
-torch==2.5.1
+torch
 torchvision
-transformers==4.51.0
+transformers
 controlnet-aux==0.0.7
 imageio
 imageio[ffmpeg]
