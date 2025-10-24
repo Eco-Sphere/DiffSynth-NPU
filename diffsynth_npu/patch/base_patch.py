@@ -7,17 +7,12 @@ def patch_xfusers_imports():
     """
     Monkey Patch xfuser.core.distributed and xfuser.core.long_ctx_attention
     """
-    import diffsynth.pipelines.wan_video_new as wan_video_module
     from diffsynth_npu.utils.distributed.parallel_mgr import (
         get_sequence_parallel_rank,
         get_sequence_parallel_world_size,
         get_sp_group
     )
     from diffsynth_npu.utils.modules.attn_layer import xFuserLongContextAttention
-    
-    wan_video_module.get_sequence_parallel_rank = get_sequence_parallel_rank
-    wan_video_module.get_sequence_parallel_world_size = get_sequence_parallel_world_size
-    wan_video_module.get_sp_group = get_sp_group
     
     import sys
     from types import ModuleType
