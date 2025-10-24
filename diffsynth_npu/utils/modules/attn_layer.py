@@ -12,7 +12,12 @@ except ImportError:
     raise ImportError("Please install yunchang 0.6.0 or later")
 from typing import Any
 
-from mindiesd.layers.flash_attn.attention_forward import attention_forward
+try:
+    from mindiesd.layers.flash_attn.attention_forward import attention_forward
+    MINDIE_SD_ATTENTION_FORWARD_AVAILABLE = True
+except:
+    MINDIE_SD_ATTENTION_FORWARD_AVAILABLE = False
+    logging.info("MindIE-SD Attention Forward is not available, using torch_npu.npu_fusion_attention")
 
 from ..distributed.parallel_mgr import get_sp_group
 from ..distributed.comm import all_to_all_4D
@@ -61,13 +66,6 @@ class xFuserLongContextAttention(LongContextAttention):
         self.video_size = ['480*832', '832*480', '480*720', '720*480']
 
         self.algo = int(os.getenv('ALGO', 0))
-
-        """
-        if self.args.size in self.video_size:
-            self.use_all_head = True
-        else:
-            self.use_all_head = False
-        """
         
         self.ulysses_pg = get_sp_group().ulysses_group
         self.ring_pg = get_sp_group().ring_group
@@ -125,36 +123,38 @@ class xFuserLongContextAttention(LongContextAttention):
             dist.all_gather_into_tensor(v_full, value_layer, group=self.ring_pg)
             value_layer = v_full.permute(1, 0, 2, 3, 4).reshape(b, -1, n, d)
 
+        if not MINDIE_SD_ATTENTION_FORWARD_AVAILABLE:
+            head_num = query_layer.shape[-2]
+            head_dim = query_layer.shape[-1]
 
-        # if self.use_all_head:
-        try:
-            if self.algo == 0:
-                out = attention_forward(query_layer, key_layer, value_layer,
-                                        opt_mode="manual", op_type="fused_attn_score", layout="BNSD")
-            elif self.algo == 1:
-                out = attention_forward(query_layer, key_layer, value_layer,
-                                        opt_mode="manual", op_type="ascend_laser_attention", layout="BNSD")
-            else:
-                raise ValueError(f"select flash attention algorithm only support 0, 1, but got {self.algo}")
-        # else:
-        except:
-            query_layer_list = query_layer.split(1, dim=2)
-            key_layer_list = key_layer.split(1, dim=2)
-            value_layer_list = value_layer.split(1, dim=2)
-            output = []
-            for_loop = query_layer.shape[2]
-            for i in range(for_loop):
-                if self.algo == 0:
-                    out = attention_forward(query_layer_list[i], key_layer_list[i], value_layer_list[i],
-                                        opt_mode="manual", op_type="fused_attn_score", layout="BNSD")
-                elif self.algo == 1:
-                    out = attention_forward(query_layer_list[i], key_layer_list[i], value_layer_list[i],
-                                        opt_mode="manual", op_type="ascend_laser_attention", layout="BNSD")
-                else:
-                    raise ValueError(f"select flash attention algorithm only support 0, 1, but got f{self.algo}")
+            scale = head_dim ** -0.5
 
-                output.append(out)
-            out = torch.cat(output, dim=2)
+            query_layer = query_layer.transpose(1, 2)
+            key_layer = key_layer.transpose(1, 2)
+            value_layer = value_layer.transpose(1, 2)
+
+            out = torch_npu.npu_fusion_attention(
+                query_layer,
+                key_layer,
+                value_layer,
+                atten_mask=None,
+                input_layout="BNSD",
+                scale=scale,
+                pre_tockens=MAX_TOKEN,
+                next_tockens=MAX_TOKEN,
+                head_num=head_num)[0]
+            out = out.transpose(1, 2)
+
+        elif self.algo == 0:
+            out = attention_forward(query_layer, key_layer, value_layer,
+                                    opt_mode="manual", op_type="fused_attn_score", layout="BNSD")
+        
+        elif self.algo == 1:
+            out = attention_forward(query_layer, key_layer, value_layer,
+                                    opt_mode="manual", op_type="ascend_laser_attention", layout="BNSD")
+        
+        else:
+            raise ValueError(f"select flash attention algorithm only support 0, 1, but got {self.algo}")
 
         if type(out) == tuple:
             context_layer, _, _ = out
