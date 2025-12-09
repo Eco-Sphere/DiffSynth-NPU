@@ -9,6 +9,7 @@ import torchvision
 from PIL import Image
 import numpy as np
 import json
+
 from diffsynth_npu.utils.device_utils import is_npu_available
 from diffsynth_npu.utils.wan_utils.wan_utils import npu_optimize
 
