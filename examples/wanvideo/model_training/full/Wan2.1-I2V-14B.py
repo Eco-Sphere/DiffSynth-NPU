@@ -10,19 +10,14 @@ from PIL import Image
 import numpy as np
 import json
 
-from diffsynth_npu.utils.device_utils import is_npu_available
-from diffsynth_npu.utils.wan_utils.wan_utils import npu_optimize
+import diffsynth_npu
+from diffsynth_npu.utils.patch_utils import replace_npu_patch
 
-if is_npu_available():
-    import torch_npu
-    from torch_npu.contrib import transfer_to_npu
-
-    torch.npu.config.allow_internal_format = False
-        ### SP 通信适配
-    from diffsynth_npu.wan_train.parallel_states import initialize_sequence_parallel_state, \
-        destroy_sequence_parallel_group, get_sequence_parallel_state, set_sequence_parallel_state, \
-        set_sequence_parallel_size, get_sequence_parallel_group, get_sequence_parallel_size
-    import torch.distributed as dist
+    ### SP 通信适配
+from diffsynth_npu.wan_train.parallel_states import initialize_sequence_parallel_state, \
+    destroy_sequence_parallel_group, get_sequence_parallel_state, set_sequence_parallel_state, \
+    set_sequence_parallel_size, get_sequence_parallel_group, get_sequence_parallel_size
+import torch.distributed as dist
 
 class I2VDataset(torch.utils.data.Dataset):
     def __init__(self, base_path, metadata_path, max_num_frames=81, frame_interval=1, num_frames=81, height=480,
@@ -616,7 +611,7 @@ def train(args):
         max_epochs=args.max_epochs,
         accelerator="gpu",
         devices="auto",
-        precision="bf16",
+        precision="bf16-mixed",
         strategy=args.training_strategy, 
         default_root_dir=args.output_path,
         accumulate_grad_batches=args.accumulate_grad_batches,
@@ -626,7 +621,9 @@ def train(args):
 
 ARGS = []
 if __name__ == '__main__':
-    npu_optimize(["npu_rope_apply", "npu_rms_norm", "WanModel", "SelfAttention", "CrossAttention", "flash_attention_sequence_parallelism"])
+    from diffsynth_npu.wan_train import NPU_OPTIM_MAP
+    optim_modules = ["npu_rope_apply", "npu_rms_norm", "WanModel", "SelfAttention", "CrossAttention", "flash_attention_sequence_parallelism"]
+    replace_npu_patch(NPU_OPTIM_MAP, optim_modules)
     args = parse_args()
     ARGS = args
     if args.task == "data_process":
