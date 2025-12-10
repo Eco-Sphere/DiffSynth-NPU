@@ -2,10 +2,12 @@ import os
 import sys
 import logging
 import torch
-import torch_npu
-from torch_npu.contrib import transfer_to_npu
-torch_npu.npu.set_compile_mode(jit_compile=False)
-torch.npu.config.allow_internal_format=False
+
+from utils.device_utils import is_npu_available
+if is_npu_available():
+    from torch_npu.contrib import transfer_to_npu
+    torch_npu.npu.set_compile_mode(jit_compile=False)
+    torch.npu.config.allow_internal_format=False
 
 def _init_logging():
     rank = int(os.getenv('RANK', 0))
