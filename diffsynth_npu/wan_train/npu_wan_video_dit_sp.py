@@ -6,16 +6,16 @@ from typing import Tuple, Optional, List
 from diffsynth.models import wan_video_dit
 from einops import rearrange
 
-from diffsynth_npu.utils.wan_utils.device_utils import is_npu_available
+import is_npu_available
 from deepspeed.sequence.layer import DistributedAttention
 from .parallel_states import get_sequence_parallel_group, get_sequence_parallel_state, \
     get_sequence_parallel_size
 import torch.distributed as dist
-from ..utils.wan_utils import log_replace_info
+from ..patch_utils import log_replace_info
 from diffsynth.models.utils import hash_state_dict_keys
 
 
-def flash_attention_sequence_parallelism_Npu(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor,
+def _flash_attention_sequence_parallelism_Npu(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor,
                                              compatibility_mode=False):
     """
     # q, k, v 的维度为 (batch_size, num_heads, seq_len, head_dim)
@@ -29,7 +29,7 @@ def flash_attention_sequence_parallelism_Npu(q: torch.Tensor, k: torch.Tensor, v
     return x
 
 
-class SelfAttention_Npu(nn.Module):
+class _SelfAttentionNpu(nn.Module):
     def __init__(self, dim: int, num_heads: int, eps: float = 1e-6):
         super().__init__()
         self.dim = dim
@@ -54,40 +54,38 @@ class SelfAttention_Npu(nn.Module):
         )
 
 
-def forward(self, x, freqs):
-    q = self.norm_q(self.q(x))
-    k = self.norm_k(self.k(x))
-    v = self.v(x)
+    def forward(self, x, freqs):
+        q = self.norm_q(self.q(x))
+        k = self.norm_k(self.k(x))
+        v = self.v(x)
 
-    if get_sequence_parallel_state():
-        """
-        启用序列并行,使用deepspeed ulysses 分布式attention
-        """
-        # print(f"self attention: sp 分布式attention")
-        # # 使用 DistributedAttention 计算注意力
-        q = wan_video_dit.rope_apply(q, freqs, self.num_heads)
-        k = wan_video_dit.rope_apply(k, freqs, self.num_heads)
-        # 调整 q, k, v 的维度为 (batch_size, seq_len, num_heads, head_dim)
-        q = rearrange(q, 'b s (n d) -> b n s d',
-                      n=self.num_heads)  # ([1, 32760, 5120]) -> [1, 40, 32760, 128] # [b n s d]
-        k = rearrange(k, 'b s (n d) -> b n s d', n=self.num_heads)
-        v = rearrange(v, 'b s (n d) -> b n s d', n=self.num_heads)  # [1, 32760, 5120] ->
-        # import pdb;pdb.set_trace()
-        x = self.dist_attn(q, k, v,
-                           batch_dim_idx=0)  # 使用 sequence parallel 计算 # [1, 32760, 5120] -> [1, 40, 32760, 128]
-        x = rearrange(x, "b n s d -> b s (n d)", n=self.num_heads)
-    else:
-        # 原始
-        x = wan_video_dit.flash_attention(
-            q=wan_video_dit.rope_apply(q, freqs, self.num_heads),
-            k=wan_video_dit.rope_apply(k, freqs, self.num_heads),
-            v=v,
-            num_heads=self.num_heads
-        )
-    return self.o(x)
+        if get_sequence_parallel_state():
+            """
+            启用序列并行,使用deepspeed ulysses 分布式attention
+            """
+            # print(f"self attention: sp 分布式attention")
+            # # 使用 DistributedAttention 计算注意力
+            q = wan_video_dit.rope_apply(q, freqs, self.num_heads)
+            k = wan_video_dit.rope_apply(k, freqs, self.num_heads)
+            # 调整 q, k, v 的维度为 (batch_size, seq_len, num_heads, head_dim)
+            q = rearrange(q, 'b s (n d) -> b n s d', n=self.num_heads)  # ([1, 32760, 5120]) -> [1, 40, 32760, 128] # [b n s d]
+            k = rearrange(k, 'b s (n d) -> b n s d', n=self.num_heads)
+            v = rearrange(v, 'b s (n d) -> b n s d', n=self.num_heads)  # [1, 32760, 5120] ->
+            # import pdb;pdb.set_trace()
+            x = self.dist_attn(q, k, v, batch_dim_idx=0)  # 使用 sequence parallel 计算 # [1, 32760, 5120] -> [1, 40, 32760, 128]
+            x = rearrange(x, "b n s d -> b s (n d)", n=self.num_heads)
+        else:
+            # 原始
+            x = wan_video_dit.flash_attention(
+                q=wan_video_dit.rope_apply(q, freqs, self.num_heads),
+                k=wan_video_dit.rope_apply(k, freqs, self.num_heads),
+                v=v,
+                num_heads=self.num_heads
+            )
+        return self.o(x)
 
 
-class CrossAttention_Npu(nn.Module):
+class _CrossAttentionNpu(nn.Module):
     def __init__(self, dim: int, num_heads: int, eps: float = 1e-6, has_image_input: bool = False):
         super().__init__()
         self.dim = dim
@@ -198,14 +196,14 @@ def wanmodel__init__(
         self.img_emb = wan_video_dit.MLP(1280, dim)  # clip_feature_dim = 1280
 
 
-def wanmodel_patchify(self, x: torch.Tensor):
+def _wanmodelpatchify(self, x: torch.Tensor):
     x = self.patch_embedding(x)
     grid_size = x.shape[2:]
     x = rearrange(x, 'b c f h w -> b (f h w) c').contiguous()
     return x, grid_size  # x, grid_size: (f, h, w)
 
 
-def wanmodel_unpatchify(self, x: torch.Tensor, grid_size: torch.Tensor):
+def _wanmodelunpatchify(self, x: torch.Tensor, grid_size: torch.Tensor):
     return rearrange(
         x, 'b (f h w) (x y z c) -> b c (f x) (h y) (w z)',
         f=grid_size[0], h=grid_size[1], w=grid_size[2],
@@ -213,7 +211,7 @@ def wanmodel_unpatchify(self, x: torch.Tensor, grid_size: torch.Tensor):
     )
 
 
-def wanmodel_forward(self,
+def _wanmodelforward(self,
                      x: torch.Tensor,
                      timestep: torch.Tensor,
                      context: torch.Tensor,
@@ -244,8 +242,7 @@ def wanmodel_forward(self,
     if get_sequence_parallel_state():
         # 序列并行切分 1-1
         sp_size = get_sequence_parallel_size()
-        x = prepare_parallel_data_for_sp(x, dim=1,
-                                         sp_size=sp_size)  # [1, 32760, 5120] -> [1, 16380, 5120]  # dim=1 对应 seq_len
+        x = prepare_parallel_data_for_sp(x, dim=1, sp_size=sp_size)  # [1, 32760, 5120] -> [1, 16380, 5120]  # dim=1 对应 seq_len
         freqs = prepare_parallel_data_for_sp(freqs, dim=0, sp_size=sp_size)  # (32760,1,64)
 
     ######################
@@ -256,10 +253,8 @@ def wanmodel_forward(self,
         N = self.num_heads
         D = H // N
 
-        cos, sin = torch.chunk(torch.view_as_real(freqs.to(torch.complex64)), 2,
-                               dim=-1)  # 通过放到首Block前，提前处理，减少每Block冗余计算, (32760,1,64) => [(32760,1,64,1), (32760,1,64,1)]
-        cos = cos.unsqueeze(0).expand(-1, -1, -1, -1, 2).flatten(
-            -2)  # 通过放到首Block前，提前处理，减少每Block冗余计算, (32760,1,64,1) ==> (1, 32760,1,64,1) ==> (1, 32760,12,64,2) ==> (1,32760,12,128)
+        cos, sin = torch.chunk(torch.view_as_real(freqs.to(torch.complex64)), 2, dim=-1)  # 通过放到首Block前，提前处理，减少每Block冗余计算, (32760,1,64) => [(32760,1,64,1), (32760,1,64,1)]
+        cos = cos.unsqueeze(0).expand(-1, -1, -1, -1, 2).flatten(-2)  # 通过放到首Block前，提前处理，减少每Block冗余计算, (32760,1,64,1) ==> (1, 32760,1,64,1) ==> (1, 32760,12,64,2) ==> (1,32760,12,128)
         sin = sin.unsqueeze(0).expand(-1, -1, -1, -1, 2).flatten(-2)  # 通过放到首Block前，提前处理，减少每Block冗余计算
 
         freqs = (cos, sin)
@@ -301,7 +296,7 @@ def wanmodel_forward(self,
     return x
 
 
-def wanmodel_state_dict_converter():
+def _wanmodel_state_dict_converter():
     return WanModelStateDictConverter()
 
 
@@ -322,10 +317,10 @@ def prepare_parallel_data_for_sp(tensor, dim, sp_size=1):
         dim: 要切分的维度（如 seq_len 对应的维度索引）
         sp_size: 序列并行组的大小（GPU数量）
     """
-    return _prepare_parallel_data_for_sp.apply(tensor, get_sequence_parallel_group(), dim, sp_size)
+    return PrepareParallelDataForSp.apply(tensor, get_sequence_parallel_group(), dim, sp_size)
 
 
-class _prepare_parallel_data_for_sp(torch.autograd.Function):
+class PrepareParallelDataForSp(torch.autograd.Function):
     """
     自定义自动微分函数，实现以下行为：
     - 前向传播：将输入张量按指定维度分片，仅保留当前rank对应的分片
@@ -494,10 +489,10 @@ def recover_parallel_data_for_sp(tensor, dim, sp_size, grad_scale="up"):
         torch.Tensor: 收集和拼接后的结果张量
     """
     # 调用自定义自动微分函数的apply方法
-    return _recover_parallel_data_for_sp.apply(tensor, get_sequence_parallel_group(), dim, sp_size, grad_scale)
+    return RecoverParallelDataForSp.apply(tensor, get_sequence_parallel_group(), dim, sp_size, grad_scale)
 
 
-class _recover_parallel_data_for_sp(torch.autograd.Function):
+class RecoverParallelDataForSp(torch.autograd.Function):
     """
     自定义的自动求导函数，用于在模型并行区域中从所有进程收集输入张量并拼接它们。
     在反向传播过程中，它会分割梯度并根据梯度缩放模式进行缩放。
@@ -653,6 +648,13 @@ class WanModelStateDictConverter:
             "proj_out.bias": "head.head.bias",
             "proj_out.weight": "head.head.weight",
         }
+        HASH_VALUES_MAP = {
+            "t2v-large" : "cb104773c6c2cb6df4f9529ad5c60d0b",
+            "t2v-large1": "9269f8db9040a9d860eaca435be61814",
+            "t2v-large2": "aafcfd9672c3a2456dc46e1cb6e52c70",
+            "t2v-large3": "6bfcfb3b342cb286ce886889d519a77e",
+
+        }
         state_dict_ = {}
         for name, param in state_dict.items():
             if name in rename_dict:
@@ -663,7 +665,7 @@ class WanModelStateDictConverter:
                     name_ = rename_dict[name_]
                     name_ = ".".join(name_.split(".")[:1] + [name.split(".")[1]] + name_.split(".")[2:])
                     state_dict_[name_] = param
-        if hash_state_dict_keys(state_dict) == "cb104773c6c2cb6df4f9529ad5c60d0b":
+        if hash_state_dict_keys(state_dict) == HASH_VALUES_MAP["t2v-large"]:
             config = {
                 "model_type": "t2v",
                 "patch_size": (1, 2, 2),
@@ -686,7 +688,7 @@ class WanModelStateDictConverter:
         return state_dict_, config
 
     def from_civitai(self, state_dict):
-        if hash_state_dict_keys(state_dict) == "9269f8db9040a9d860eaca435be61814":
+        if hash_state_dict_keys(state_dict) ==  HASH_VALUES_MAP["t2v-large1"]:
             config = {
                 "has_image_input": False,
                 "patch_size": [1, 2, 2],
@@ -700,7 +702,7 @@ class WanModelStateDictConverter:
                 "num_layers": 30,
                 "eps": 1e-6
             }
-        elif hash_state_dict_keys(state_dict) == "aafcfd9672c3a2456dc46e1cb6e52c70":
+        elif hash_state_dict_keys(state_dict) == HASH_VALUES_MAP["t2v-large2"]:
             config = {
                 "has_image_input": False,
                 "patch_size": [1, 2, 2],
@@ -714,7 +716,7 @@ class WanModelStateDictConverter:
                 "num_layers": 40,
                 "eps": 1e-6
             }
-        elif hash_state_dict_keys(state_dict) == "6bfcfb3b342cb286ce886889d519a77e":
+        elif hash_state_dict_keys(state_dict) == HASH_VALUES_MAP["t2v-large3"]:
             config = {
                 "has_image_input": True,
                 "patch_size": [1, 2, 2],
@@ -735,27 +737,27 @@ class WanModelStateDictConverter:
 
 def replace_npu_wanmodel():
     from diffsynth.models import wan_video_dit
-    wan_video_dit.wanmodel.__init__ = wanmodel__init__
-    wan_video_dit.WanModel.wanmodel_forward = wanmodel_forward
-    wan_video_dit.WanModel.wanmodel_patchify = wanmodel_patchify
-    wan_video_dit.WanModel.wanmodel_unpatchify = wanmodel_unpatchify
-    wan_video_dit.WanModel.wanmodel_state_dict_converter = wanmodel_state_dict_converter
+    wan_video_dit.WanModel.__init__ = wanmodel__init__
+    wan_video_dit.WanModel.forward = _wanmodelforward
+    wan_video_dit.WanModel.patchify = _wanmodelpatchify
+    wan_video_dit.WanModel.unpatchify = _wanmodelunpatchify
+    wan_video_dit.WanModel.state_dict_converter = _wanmodel_state_dict_converter
     log_replace_info("WanModel", "WanModel_Npu")
 
 
 def replace_npu_SelfAttention():
     from diffsynth.models import wan_video_dit
-    wan_video_dit.SelfAttention = SelfAttention_Npu
-    log_replace_info("SelfAttention", "SelfAttention_Npu")
+    wan_video_dit.SelfAttention = _SelfAttentionNpu
+    log_replace_info("SelfAttention", "SelfAttentionNpu")
 
 
 def replace_npu_CrossAttention():
     from diffsynth.models import wan_video_dit
-    wan_video_dit.CrossAttention = CrossAttention_Npu
-    log_replace_info("CrossAttention", "CrossAttention_Npu")
+    wan_video_dit.CrossAttention = _CrossAttentionNpu
+    log_replace_info("CrossAttention", "CrossAttentionNpu")
 
 
 def replace_npu_flash_attention_sequence_parallelism():
     from diffsynth.models import wan_video_dit
-    wan_video_dit.flash_attention_sequence_parallelism = flash_attention_sequence_parallelism_Npu
+    wan_video_dit.flash_attention_sequence_parallelism = _flash_attention_sequence_parallelism_Npu
     log_replace_info("flash_attention_sequence_parallelism", "flash_attention_sequence_parallelism_Npu")

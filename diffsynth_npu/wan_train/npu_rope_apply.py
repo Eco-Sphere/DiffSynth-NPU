@@ -1,6 +1,6 @@
 import torch
 import torch_npu
-from ..utils.wan_utils import log_replace_info
+from ..patch_utils import log_replace_info
 from einops import rearrange
 
 def npu_rope_apply(x, freqs, num_heads):  # fp32
@@ -12,8 +12,6 @@ def npu_rope_apply(x, freqs, num_heads):  # fp32
         return torch.cat((-x2, x1), dim=-1).reshape((B, S, N, D))
     res = x * cos + rotate_half(x) * sin  # 此处cos显示是fp64，x是bf16，出来的res也显示是fp64
     return res.flatten(2).to(x.dtype)
-
-
 
 def replace_func():
     from diffsynth.models import wan_video_dit
