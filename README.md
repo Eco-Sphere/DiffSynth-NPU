@@ -7,9 +7,9 @@
 昇腾为基于华为昇腾处理器和软件的行业应用及服务提供全栈AI计算基础设施。您可以通过访问[昇腾社区](https://www.hiascend.com/zh)，了解关于昇腾的更多信息。
 
 ## 2. 版本说明
-| DiffSynth 版本 | DiffSynth-NPU 版本|
-| - | - |
-| 1.18.0 | 1.18.0 |
+| DiffSynth 版本 | DiffSynth-NPU 版本 |
+|--------------|------------------|
+| 1.1.8        | 1.1.8            |
 
 ## 3. 当前版本支持的模型
 | 模型名称 | 验证状态 | 运行样例 |
@@ -52,7 +52,7 @@
 | CFG 并行 | 计划中🕐 | \ |
 | FSDP 分片 | 计划中🕐 | \ |
 
-## 5. 快速开始
+## 5. 推理快速开始
 
 ### 5.1. 环境准备
 #### 5.1.1 准备运行环境
@@ -141,4 +141,110 @@ import diffsynth
 import diffsynth_npu
 
 ...
+```
+## 6. 训练快速开始
+
+### 6.1 环境准备
+#### 6.1.1 准备运行环境
+
+  **表 1**  版本配套表
+
+  | 配套  | 版本      | 环境准备指导 |
+  |---------| ----- |-----|
+  | Python | 3.10.10 | - |
+  | torch | 2.6.0   | - |
+
+#### 6.1.2 获取CANN&数据集权重&环境准备
+- 设备支持
+Atlas 800I/800T A2(8*64G)推理设备：支持的卡数最小为1
+- [Atlas 800I/800T A2(8*64G)](https://www.hiascend.com/developer/download/community/result?module=pt+ie+cann&product=4&model=32)
+- [环境准备指导](https://www.hiascend.com/document/detail/zh/CANNCommunityEdition/80RC2alpha002/softwareinst/instg/instg_0001.html)
+
+#### 6.1.3 CANN安装
+```shell
+# 增加软件包可执行权限，{version}表示软件版本号，{arch}表示CPU架构，{soc}表示昇腾AI处理器的版本。
+chmod +x ./Ascend-cann-toolkit_{version}_linux-{arch}.run
+chmod +x ./Ascend-cann-kernels-{soc}_{version}_linux.run
+# 校验软件包安装文件的一致性和完整性
+./Ascend-cann-toolkit_{version}_linux-{arch}.run --check
+./Ascend-cann-kernels-{soc}_{version}_linux.run --check
+# 安装
+./Ascend-cann-toolkit_{version}_linux-{arch}.run --install
+./Ascend-cann-kernels-{soc}_{version}_linux.run --install
+
+# 设置环境变量
+source /usr/local/Ascend/ascend-toolkit/set_env.sh
+```
+#### 6.1.4 准备数据集
+
+1. 按照如下格式组织数据集
+
+   ```
+   data/example_dataset/
+   ├── metadata.csv
+   └── train
+       ├── video_00001.mp4
+       └── image_00002.jpg
+   ```
+2. 构建`metadata.csv`文件，包含对数据的描述:
+   ```
+   file_name,text
+   video_00001.mp4,"video description"
+   image_00002.jpg,"video description"
+   ```
+   模型训练支持图像与视频，图像作为单帧视频处理
+
+3. 使用scripts目录下的对应任务脚本处理数据，注意脚本中的相关信息修改：
+
+   ```shell
+   bash scripts/process_data_i2v_1p.sh
+   bash scripts/process_data_t2v_1p.sh
+   ```
+
+最终输出数据文件夹格式：
+
+```
+data/example_dataset/
+├── metadata.csv
+└── train
+    ├── video_00001.mp4
+    ├── video_00001.mp4.tensors.pth
+    ├── video_00002.mp4
+    └── video_00002.mp4.tensors.pth
+```
+
+
+
+#### 6.1.5 准备预训练模型权重
+huggingface下载预训练模型权重
+
+#### 6.1.6 Torch_npu安装
+下载 pytorch_v{pytorchversion}_py{pythonversion}.tar.gz
+```shell
+tar -xzvf pytorch_v{pytorchversion}_py{pythonversion}.tar.gz
+# 解压后，会有whl包
+pip install torch_npu-{pytorchversion}.xxxx.{arch}.whl
+```
+
+#### 6.1.7 环境依赖安装
+```shell
+pip3 install -r requirements.txt
+```
+
+### 6.2 编译安装 DiffSynth-Studio
+> 参考[DiffSynth-Studio](https://github.com/modelscope/DiffSynth-Studio)
+
+### 6.3 编译安装 DiffSynth-NPU
+```shell
+pip install -e ./
+```
+
+### 6.4 运行指导
+
+启动脚本均在模型根目录scripts中，运行前注意修改对应数据、权重、输出路径等信息。
+
+## i2v-14B, 8卡, 开启序列并行[SP2]
+
+```
+bash scripts/train_i2v_full_14B_sp2_8p.sh
 ```
