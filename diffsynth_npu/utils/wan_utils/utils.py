@@ -10,7 +10,7 @@ except:
         except:
             return False
 
-from cache_dit.logger import init_logger
+from logger import init_logger
 
 logger = init_logger(__name__)
 
@@ -21,7 +21,7 @@ def log_replace_info(ori_module, npu_module):
 
 def npu_optimize(optim_modules: dict = None):
     if is_torch_npu_available():
-        from .npu_ops import NPU_OPTIM_MAP
+        from diffsynth_npu.wan_train import NPU_OPTIM_MAP
 
         if optim_modules is None:
             optim_modules = list(NPU_OPTIM_MAP.keys())
