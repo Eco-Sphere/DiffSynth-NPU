@@ -18,6 +18,9 @@ export PYTORCH_NPU_ALLOC_CONF=expandable_segments:True
 export HCCL_CONNECT_TIMEOUT=1200
 export CLOSE_MATMUL_K_SHIFT=1
 
+# Set Model Path
+export MODEL_PATH='/home/local_data/Wan2.1-I2V-14B-480'
+
 # Set Training Configs
 export ASCEND_RT_VISIBLE_DEVICES=0,1,2,3,4,5,6,7
 
@@ -45,13 +48,13 @@ torchrun $DISTRIBUTED_ARGS examples/wanvideo/model_training/full/Wan2.1-I2V-14B.
   --dataset_path ./path_to_your_data \
   --metadata_name metadata.json \
   --dit_path "[
-        \"/home/local_data/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00001-of-00007.safetensors\",
-        \"/home/local_data/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00002-of-00007.safetensors\",
-        \"/home/local_data/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00003-of-00007.safetensors\",
-        \"/home/local_data/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00004-of-00007.safetensors\",
-        \"/home/local_data/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00005-of-00007.safetensors\",
-        \"/home/local_data/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00006-of-00007.safetensors\",
-        \"/home/local_data/Wan2.1-I2V-14B-480P/diffusion_pytorch_model-00007-of-00007.safetensors\"
+        \"${MODEL_PATH}/diffusion_pytorch_model-00001-of-00007.safetensors\",
+        \"${MODEL_PATH}/diffusion_pytorch_model-00002-of-00007.safetensors\",
+        \"${MODEL_PATH}/diffusion_pytorch_model-00003-of-00007.safetensors\",
+        \"${MODEL_PATH}/diffusion_pytorch_model-00004-of-00007.safetensors\",
+        \"${MODEL_PATH}/diffusion_pytorch_model-00005-of-00007.safetensors\",
+        \"${MODEL_PATH}/diffusion_pytorch_model-00006-of-00007.safetensors\",
+        \"${MODEL_PATH}/diffusion_pytorch_model-00007-of-00007.safetensors\"
     ]"  \
   --steps_per_epoch 1233 \
   --max_epochs 1 \
