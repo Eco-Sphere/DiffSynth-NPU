@@ -24,17 +24,9 @@ def _init_logging():
 def patch_features():
     _init_logging()
 
-    from diffsynth_npu.patch.base_patch import (
-        patch_xfusers_imports,
-        patch_initialize_usp,
-        patch_torch_ones,
-        patch_torch_float64_to_float32,
-        patch_tensor_double_to_float32
-    )
-    patch_xfusers_imports()
-    patch_initialize_usp()
-    patch_torch_ones()
-    patch_torch_float64_to_float32()
-    patch_tensor_double_to_float32()
+    from diffsynth_npu.utils.patch_utils import replace_npu_patch
+    from diffsynth_npu.patch import NPU_PATCH_MAP
+
+    replace_npu_patch(NPU_PATCH_MAP)
 
 patch_features()

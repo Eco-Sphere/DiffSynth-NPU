@@ -1,6 +1,6 @@
 import torch
 import torch_npu
-from ..patch_utils import log_replace_info
+from ..utils.patch_utils import log_replace_info
 from einops import rearrange
 
 def npu_rope_apply(x, freqs, num_heads):  # fp32

@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch_npu
-from ..patch_utils import log_replace_info
+from ..utils.patch_utils import log_replace_info
 
 class NpuRMSNorm(torch.nn.Module):
     def __init__(self, dim: int, eps: float = 1e-6):
