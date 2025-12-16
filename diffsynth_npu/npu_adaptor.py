@@ -4,7 +4,7 @@ import logging
 import torch
 
 from utils.device_utils import is_npu_available
-from diffsynth_npu.utils.patch_utils import replace_npu_patch
+from diffsynth_npu.features_manager import DiffSynthFeaturesManager
 
 if is_npu_available():
     from torch_npu.contrib import transfer_to_npu
@@ -23,15 +23,14 @@ def _init_logging():
     else:
         logging.basicConfig(level=logging.ERROR)
 
-def patch_infer_features():
-    from diffsynth_npu.patch import NPU_PATCH_MAP
-    replace_npu_patch(NPU_PATCH_MAP)
 
-def patch_train_features():
-    from diffsynth_npu.wan_train import NPU_OPTIM_MAP
-    optim_modules = ["npu_rope_apply", "npu_rms_norm", "WanModel", "SelfAttention", "CrossAttention", "flash_attention_sequence_parallelism"]
-    replace_npu_patch(NPU_OPTIM_MAP, optim_modules)
+def patch_features(mode: str = "all"):
+    """Unified entry for applying DiffSynth-NPU patches.
+
+    Args:
+        mode: ``\"all\"`` / ``\"infer\"`` / ``\"train\"``.
+    """
+    DiffSynthFeaturesManager.apply_features_patches(mode)
 
 _init_logging()
-patch_infer_features()
-patch_train_features()
+patch_features()
