@@ -2,7 +2,7 @@ import os
 import time
 from datetime import datetime
 import torch
-import diffsynth_npu
+import diffsynth_npu.npu_adaptor
 
 from PIL import Image
 from diffsynth import save_video, VideoData
