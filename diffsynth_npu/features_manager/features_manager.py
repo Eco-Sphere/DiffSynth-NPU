@@ -1,32 +1,22 @@
 from typing import List
 
 from diffsynth_npu.patch_manager import DiffSynthPatchesManager
-
-
-class DiffSynthFeature:
-    """Base class for DiffSynth-NPU features.
-
-    Compared with MindSpeed's ``MindSpeedFeature``, this version is
-    intentionally simplified: for now we only care about whether a
-    feature should be enabled under a given ``mode`` (infer/train/all)
-    and how it registers patches into ``DiffSynthPatchesManager``.
-    """
-
-    def __init__(self, feature_name: str) -> None:
-        self.feature_name = feature_name.lower().strip().replace("-", "_")
-
-    def is_need_apply(self, mode: str) -> bool:
-        """Return ``True`` if this feature should be applied under ``mode``."""
-        return True
-
-    def pre_register_patches(self, patch_manager: DiffSynthPatchesManager, mode: str) -> None:  # type: ignore[name-defined]
-        """Hook for pre-patch registration (kept for symmetry with MindSpeed)."""
-        return None
-
-    def register_patches(self, patch_manager: DiffSynthPatchesManager, mode: str) -> None:  # type: ignore[name-defined]
-        """Register runtime patches into the given patch manager."""
-        raise NotImplementedError
-
+from diffsynth_npu.features_manager.features import DiffSynthFeature
+from diffsynth_npu.features_manager.infer.infer import (
+    XfuserImportFeature,
+    WanInitializeUSPFeature,
+    TorchOnesFeature,
+    TorchFloat64To32Feature,
+    TensorDoubleToFloat32Feature,
+)
+from diffsynth_npu.features_manager.train.train import (
+    RopeApplyFeature,
+    RmsNormFeature,
+    WanModelFeature,
+    SelfAttentionFeature,
+    CrossAttentionFeature,
+    FlashAttnSequenceParallelFeature,
+)
 
 class InferPatchFeature(DiffSynthFeature):
     """Feature that manages all inference-time patches."""
@@ -76,9 +66,25 @@ class DiffSynthFeaturesManager:
     """
 
     FEATURES_LIST: List[DiffSynthFeature] = [
-        InferPatchFeature(),
-        TrainPatchFeature(),
+        # Inference-side features
+        XfuserImportFeature(),
+        WanInitializeUSPFeature(),
+        TorchOnesFeature(),
+        TorchFloat64To32Feature(),
+        TensorDoubleToFloat32Feature(),
+        # Training-side features
+        RopeApplyFeature(),
+        RmsNormFeature(),
+        WanModelFeature(),
+        SelfAttentionFeature(),
+        CrossAttentionFeature(),
+        FlashAttnSequenceParallelFeature(),
     ]
+
+    @classmethod
+    def set_features_list(cls, features_list: List[DiffSynthFeature]):
+        """Set features list"""
+        cls.FEATURES_LIST[:] = features_list
 
     @classmethod
     def apply_features_pre_patches(cls, mode: str = "all") -> None:
