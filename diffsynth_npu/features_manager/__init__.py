@@ -1,3 +1,1 @@
-
-
 from diffsynth_npu.features_manager.features_manager import DiffSynthFeaturesManager

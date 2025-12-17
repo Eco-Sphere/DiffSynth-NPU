@@ -2,14 +2,14 @@ from typing import List
 
 from diffsynth_npu.patch_manager import DiffSynthPatchesManager
 from diffsynth_npu.features_manager.features import DiffSynthFeature
-from diffsynth_npu.features_manager.infer.infer import (
+from diffsynth_npu.features_manager.infer import (
     XfuserImportFeature,
     WanInitializeUSPFeature,
     TorchOnesFeature,
     TorchFloat64To32Feature,
     TensorDoubleToFloat32Feature,
 )
-from diffsynth_npu.features_manager.train.train import (
+from diffsynth_npu.features_manager.train import (
     RopeApplyFeature,
     RmsNormFeature,
     WanModelFeature,

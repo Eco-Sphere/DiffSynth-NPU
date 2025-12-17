@@ -35,10 +35,7 @@ class NpuRMSNorm(torch.nn.Module):
         return torch_npu.npu_rms_norm(x, self.weight, epsilon=self.eps)[0]
 
 
-def replace_func():
+def replace_npu_rms_norm():
     from diffsynth.models import wan_video_dit
     wan_video_dit.RMSNrom  = NpuRMSNorm
-
-def replace_npu_rms_norm():
-    replace_func()
     log_replace_info("RMSNorm of wan_video_dit", "replace_npu_rms_norm" )
