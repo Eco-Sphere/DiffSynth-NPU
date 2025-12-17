@@ -1,5 +1,7 @@
 from diffsynth_npu.features_manager.features import DiffSynthFeature
 from diffsynth_npu.patch_manager import DiffSynthPatchesManager
+from diffsynth_npu.utils.patch_utils import log_replace_info
+from diffsynth_npu.patch.base_patch import patch_initialize_usp
 
 
 class WanInitializeUSPFeature(DiffSynthFeature):
@@ -15,4 +17,7 @@ class WanInitializeUSPFeature(DiffSynthFeature):
         patch_manager.register_infer_modules(["patch_initialize_usp"])
 
 
+def replace_patch_initialize_usp():
+    patch_initialize_usp()
+    log_replace_info("WanVideoPipeline.initialize_usp", "replace_patch_initialize_usp")
 

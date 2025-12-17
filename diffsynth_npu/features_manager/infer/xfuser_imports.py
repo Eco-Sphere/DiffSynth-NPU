@@ -1,5 +1,7 @@
 from diffsynth_npu.features_manager.features import DiffSynthFeature
 from diffsynth_npu.patch_manager import DiffSynthPatchesManager
+from diffsynth_npu.utils.patch_utils import log_replace_info
+from diffsynth_npu.patch.base_patch import patch_xfusers_imports
 
 
 class XfuserImportFeature(DiffSynthFeature):
@@ -15,4 +17,7 @@ class XfuserImportFeature(DiffSynthFeature):
         patch_manager.register_infer_modules(["patch_xfusers_imports"])
 
 
+def replace_patch_xfusers_imports():
+    patch_xfusers_imports()
+    log_replace_info("xfuser imports", "replace_patch_xfusers_imports")
 

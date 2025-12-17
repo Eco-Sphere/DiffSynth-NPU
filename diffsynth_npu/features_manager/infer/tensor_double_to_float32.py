@@ -1,6 +1,7 @@
 from diffsynth_npu.features_manager.features import DiffSynthFeature
 from diffsynth_npu.patch_manager import DiffSynthPatchesManager
-
+from diffsynth_npu.utils.patch_utils import log_replace_info
+from diffsynth_npu.patch.base_patch import patch_tensor_double_to_float32
 
 class TensorDoubleToFloat32Feature(DiffSynthFeature):
     """Patch torch.Tensor.double() to use float32 on NPU."""
@@ -15,4 +16,7 @@ class TensorDoubleToFloat32Feature(DiffSynthFeature):
         patch_manager.register_infer_modules(["patch_tensor_double_to_float32"])
 
 
+def replace_patch_tensor_double_to_float32():
+    patch_tensor_double_to_float32()
+    log_replace_info("torch.Tensor.double", "replace_patch_tensor_double_to_float32")
 
