@@ -11,7 +11,7 @@ class DiffSynthPatchesManager:
 
     This is inspired by MindSpeed's ``MindSpeedPatchesManager`` but is
     simplified to match DiffSynth-NPU's existing patch style
-    (``NPU_PATCH_MAP`` / ``NPU_OPTIM_MAP`` + ``replace_npu_patch``).
+    (``NPU_INFER_PATCH_MAP`` / ``NPU_TRAIN_PATCH_MAP`` + ``replace_npu_patch``).
     """
 
     # Names of inference / training modules that should be patched.
@@ -22,7 +22,7 @@ class DiffSynthPatchesManager:
     def register_infer_modules(cls, modules: Optional[List[str]] = None) -> None:
         """Register inference-side modules to be patched.
 
-        If ``modules`` is ``None``, all entries in ``NPU_PATCH_MAP`` will be
+        If ``modules`` is ``None``, all entries in ``NPU_INFER_PATCH_MAP`` will be
         used when applying patches.
         """
         if modules:
@@ -43,16 +43,16 @@ class DiffSynthPatchesManager:
     @classmethod
     def apply_infer_patches(cls) -> None:
         """Apply inference-related patches via ``replace_npu_patch``."""
-        from diffsynth_npu.patch import NPU_PATCH_MAP
+        from diffsynth_npu.features_manager import NPU_INFER_PATCH_MAP
 
-        modules = cls._infer_modules or list(NPU_PATCH_MAP.keys())
+        modules = cls._infer_modules or list(NPU_INFER_PATCH_MAP.keys())
         LOG.info("[DiffSynth NPU] applying inference patches: %s", modules)
-        replace_npu_patch(NPU_PATCH_MAP, modules)
+        replace_npu_patch(NPU_INFER_PATCH_MAP, modules)
 
     @classmethod
     def apply_train_patches(cls) -> None:
         """Apply training-related patches via ``replace_npu_patch``."""
-        from diffsynth_npu.wan_train import NPU_OPTIM_MAP
+        from diffsynth_npu.features_manager import NPU_TRAIN_PATCH_MAP
 
         # Default modules list is aligned with the original ``npu_adaptor``.
         default_modules = [
@@ -65,7 +65,7 @@ class DiffSynthPatchesManager:
         ]
         modules = cls._train_modules or default_modules
         LOG.info("[DiffSynth NPU] applying training patches: %s", modules)
-        replace_npu_patch(NPU_OPTIM_MAP, modules)
+        replace_npu_patch(NPU_TRAIN_PATCH_MAP, modules)
 
     @classmethod
     def apply_patches(cls, mode: str = "all") -> None:
@@ -78,5 +78,4 @@ class DiffSynthPatchesManager:
             cls.apply_infer_patches()
         if mode in ("all", "train"):
             cls.apply_train_patches()
-
 

@@ -29,11 +29,11 @@ class InferPatchFeature(DiffSynthFeature):
 
     def register_patches(self, patch_manager: DiffSynthPatchesManager, mode: str) -> None:  # type: ignore[name-defined]
         # By default we let ``DiffSynthPatchesManager`` pick up all keys in
-        # ``NPU_PATCH_MAP`` so there is nothing specific to register here.
+        # ``NPU_INFER_PATCH_MAP`` so there is nothing specific to register here.
         # The call is kept for future extensibility.
-        from diffsynth_npu.patch import NPU_PATCH_MAP
+        from diffsynth_npu.features_manager import NPU_INFER_PATCH_MAP
 
-        patch_manager.register_infer_modules(list(NPU_PATCH_MAP.keys()))
+        patch_manager.register_infer_modules(list(NPU_INFER_PATCH_MAP.keys()))
 
 
 class TrainPatchFeature(DiffSynthFeature):
@@ -104,5 +104,4 @@ class DiffSynthFeaturesManager:
             if feature.is_need_apply(mode):
                 feature.register_patches(DiffSynthPatchesManager, mode)
         DiffSynthPatchesManager.apply_patches(mode)
-
 

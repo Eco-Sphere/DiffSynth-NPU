@@ -25,8 +25,8 @@ def patch_features():
     _init_logging()
 
     from diffsynth_npu.utils.patch_utils import replace_npu_patch
-    from diffsynth_npu.patch import NPU_PATCH_MAP
+    from diffsynth_npu.features_manager import NPU_INFER_PATCH_MAP
 
-    replace_npu_patch(NPU_PATCH_MAP)
+    replace_npu_patch(NPU_INFER_PATCH_MAP)
 
 patch_features()

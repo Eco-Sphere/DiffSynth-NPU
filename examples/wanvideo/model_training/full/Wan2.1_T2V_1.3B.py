@@ -533,10 +533,6 @@ if __name__ == '__main__':
     # 替换npu patch
     import diffsynth_npu.npu_adaptor
 
-    # from diffsynth_npu.utils.patch_utils import replace_npu_patch
-    # from diffsynth_npu.wan_train import NPU_OPTIM_MAP
-    # optim_modules = ["npu_rope_apply", "npu_rms_norm", "WanModel", "SelfAttention", "CrossAttention", "flash_attention_sequence_parallelism"]
-    # replace_npu_patch(NPU_OPTIM_MAP, optim_modules)
     args = parse_args()
     if args.task == "data_process":
         data_process(args)
