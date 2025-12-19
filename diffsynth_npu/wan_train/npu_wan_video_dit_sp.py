@@ -3,17 +3,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 # SP 通信适配
 from typing import Tuple, Optional, List
-from diffsynth.models import wan_video_dit
 from einops import rearrange
-
-import is_npu_available
 from deepspeed.sequence.layer import DistributedAttention
-from .parallel_states import get_sequence_parallel_group, get_sequence_parallel_state, \
+from diffsynth_npu.wan_train.parallel_states import get_sequence_parallel_group, get_sequence_parallel_state, \
     get_sequence_parallel_size
 import torch.distributed as dist
-from ..patch_utils import log_replace_info
-from diffsynth.models.utils import hash_state_dict_keys
 
+from diffsynth.models import wan_video_dit
+from diffsynth.models.utils import hash_state_dict_keys
+from diffsynth_npu.utils.patch_utils import log_replace_info
+from diffsynth_npu.utils.device_utils import is_npu_available
 
 def _flash_attention_sequence_parallelism_Npu(q: torch.Tensor, k: torch.Tensor, v: torch.Tensor,
                                              compatibility_mode=False):
@@ -46,7 +45,7 @@ class _SelfAttentionNpu(nn.Module):
         # 使用 flash_attention 作为 local_attention
         self.dist_attn = DistributedAttention(
             # 传入 flash_attention
-            local_attention=flash_attention_sequence_parallelism_Npu,
+            local_attention=_flash_attention_sequence_parallelism_Npu,
             # 获取 DeepSpeed 的序列并行组
             sequence_process_group=get_sequence_parallel_group(),
             gather_idx=2,  # 将输入时切分的序列gather聚合
@@ -102,7 +101,7 @@ class _CrossAttentionNpu(nn.Module):
 
         # 使用 flash_attention 作为 local_attention
         self.dist_attn = DistributedAttention(
-            local_attention=flash_attention_sequence_parallelism_Npu,  # 传入 flash_attention
+            local_attention=_flash_attention_sequence_parallelism_Npu,  # 传入 flash_attention
             sequence_process_group=get_sequence_parallel_group(),  # 获取 DeepSpeed 的序列并行组
             gather_idx=2,  # 将输入切分的序列gather
             scatter_idx=1  # 将num_heads切分
@@ -162,6 +161,14 @@ def wanmodel__init__(
         num_heads: int,
         num_layers: int,
         has_image_input: bool,
+        has_image_pos_emb: bool = False,
+        has_ref_conv: bool = False,
+        add_control_adapter: bool = False,
+        in_dim_control_adapter: int = 24,
+        seperated_timestep: bool = False,
+        require_vae_embedding: bool = True,
+        require_clip_embedding: bool = True,
+        fuse_vae_embedding_in_latents: bool = False,
 ):
     torch.nn.Module.__init__(self)
     self.dim = dim
@@ -169,6 +176,11 @@ def wanmodel__init__(
     self.has_image_input = has_image_input
     self.patch_size = patch_size
     self.num_heads = num_heads
+    self.seperated_timestep = seperated_timestep
+    self.require_vae_embedding = require_vae_embedding
+    self.require_clip_embedding = require_clip_embedding
+    self.fuse_vae_embedding_in_latents = fuse_vae_embedding_in_latents
+
 
     self.patch_embedding = nn.Conv3d(
         in_dim, dim, kernel_size=patch_size, stride=patch_size)
@@ -195,9 +207,23 @@ def wanmodel__init__(
     if has_image_input:
         self.img_emb = wan_video_dit.MLP(1280, dim)  # clip_feature_dim = 1280
 
+    if has_ref_conv:
+        self.ref_conv = nn.Conv2d(16, dim, kernel_size=(2, 2), stride=(2, 2))
+    self.has_image_pos_emb = has_image_pos_emb
+    self.has_ref_conv = has_ref_conv
+    if add_control_adapter:
+        raise NotImplementedError
+        self.control_adapter = SimpleAdapter(in_dim_control_adapter, dim, kernel_size=patch_size[1:], stride=patch_size[1:])
+    else:
+        self.control_adapter = None
 
-def _wanmodelpatchify(self, x: torch.Tensor):
+
+def _wanmodelpatchify(self, x: torch.Tensor, control_camera_latents_input: Optional[torch.Tensor] = None):
     x = self.patch_embedding(x)
+    if self.control_adapter is not None and control_camera_latents_input is not None:
+        y_camera = self.control_adapter(control_camera_latents_input)
+        x = [u + v for u, v in zip(x, y_camera)]
+        x = x[0].unsqueeze(0)
     grid_size = x.shape[2:]
     x = rearrange(x, 'b c f h w -> b (f h w) c').contiguous()
     return x, grid_size  # x, grid_size: (f, h, w)
@@ -599,6 +625,15 @@ def _split(
 
 ####################通信并行相关method-end
 
+
+HASH_VALUES_MAP = {
+    "t2v-large" : "cb104773c6c2cb6df4f9529ad5c60d0b",
+    "t2v-large1": "9269f8db9040a9d860eaca435be61814",
+    "t2v-large2": "aafcfd9672c3a2456dc46e1cb6e52c70",
+    "t2v-large3": "6bfcfb3b342cb286ce886889d519a77e",
+}
+
+
 class WanModelStateDictConverter:
     def __init__(self):
         pass
@@ -648,13 +683,7 @@ class WanModelStateDictConverter:
             "proj_out.bias": "head.head.bias",
             "proj_out.weight": "head.head.weight",
         }
-        HASH_VALUES_MAP = {
-            "t2v-large" : "cb104773c6c2cb6df4f9529ad5c60d0b",
-            "t2v-large1": "9269f8db9040a9d860eaca435be61814",
-            "t2v-large2": "aafcfd9672c3a2456dc46e1cb6e52c70",
-            "t2v-large3": "6bfcfb3b342cb286ce886889d519a77e",
 
-        }
         state_dict_ = {}
         for name, param in state_dict.items():
             if name in rename_dict:
@@ -761,3 +790,5 @@ def replace_npu_flash_attention_sequence_parallelism():
     from diffsynth.models import wan_video_dit
     wan_video_dit.flash_attention_sequence_parallelism = _flash_attention_sequence_parallelism_Npu
     log_replace_info("flash_attention_sequence_parallelism", "flash_attention_sequence_parallelism_Npu")
+
+    

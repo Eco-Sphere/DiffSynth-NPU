@@ -19,3 +19,4 @@ class TorchOnesFeature(DiffSynthFeature):
 def replace_patch_torch_ones():
     patch_torch_ones()
     log_replace_info("torch.ones", "replace_patch_torch_ones")
+

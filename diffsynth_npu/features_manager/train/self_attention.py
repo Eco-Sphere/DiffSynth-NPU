@@ -24,5 +24,3 @@ def replace_npu_SelfAttention():
     wan_video_dit.SelfAttention = _SelfAttentionNpu
     log_replace_info("SelfAttention", "SelfAttentionNpu")
 
-
-

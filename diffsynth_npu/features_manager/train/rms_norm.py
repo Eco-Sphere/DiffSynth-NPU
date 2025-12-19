@@ -24,5 +24,3 @@ def replace_npu_rms_norm():
     wan_video_dit.RMSNrom = NpuRMSNorm
     log_replace_info("RMSNorm of wan_video_dit", "replace_npu_rms_norm")
 
-
-

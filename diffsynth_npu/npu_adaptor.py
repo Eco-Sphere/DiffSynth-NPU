@@ -3,12 +3,12 @@ import sys
 import logging
 import torch
 
-from utils.device_utils import is_npu_available
+from diffsynth_npu.utils.device_utils import is_npu_available
 from diffsynth_npu.features_manager import DiffSynthFeaturesManager
 
 if is_npu_available():
     from torch_npu.contrib import transfer_to_npu
-    torch_npu.npu.set_compile_mode(jit_compile=False)
+    torch.npu.set_compile_mode(jit_compile=False)
     torch.npu.config.allow_internal_format=False
 
 def _init_logging():
@@ -24,7 +24,7 @@ def _init_logging():
         logging.basicConfig(level=logging.ERROR)
 
 
-def patch_features(mode: str = "all"):
+def patch_features(mode: str = "infer"):
     """Unified entry for applying DiffSynth-NPU patches.
 
     Args:

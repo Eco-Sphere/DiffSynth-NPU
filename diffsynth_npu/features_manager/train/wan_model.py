@@ -3,7 +3,7 @@ from diffsynth_npu.features_manager.features import DiffSynthFeature
 from diffsynth_npu.patch_manager import DiffSynthPatchesManager
 from diffsynth_npu.utils.patch_utils import log_replace_info
 from diffsynth_npu.wan_train.npu_wan_video_dit_sp import (
-    wanmodel__init,
+    wanmodel__init__,
     _wanmodelforward,
     _wanmodelpatchify,
     _wanmodelunpatchify,
@@ -27,9 +27,10 @@ class WanModelFeature(DiffSynthFeature):
 def replace_npu_wanmodel():
     """Replace ``diffsynth.models.wan_video_dit.npu_wan_video_dit_sp.replace_npu_wanmodel`` for locality."""
 
-    wan_video_dit.WanModel.__init__ = wanmodel__init
+    wan_video_dit.WanModel.__init__ = wanmodel__init__
     wan_video_dit.WanModel.forward = _wanmodelforward
     wan_video_dit.WanModel.patchify = _wanmodelpatchify
     wan_video_dit.WanModel.unpatchify = _wanmodelunpatchify
     wan_video_dit.WanModel.state_dict_converter = _wanmodel_state_dict_converter
     log_replace_info("WanModel", "WanModel_Npu")
+

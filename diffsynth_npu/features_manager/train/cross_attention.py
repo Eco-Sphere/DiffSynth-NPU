@@ -24,5 +24,3 @@ def replace_npu_CrossAttention():
     wan_video_dit.CrossAttention = _CrossAttentionNpu
     log_replace_info("CrossAttention", "CrossAttentionNpu")
 
-
-

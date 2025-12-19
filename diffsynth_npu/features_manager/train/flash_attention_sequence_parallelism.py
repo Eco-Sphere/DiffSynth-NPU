@@ -24,5 +24,3 @@ def replace_npu_flash_attention_sequence_parallelism():
     wan_video_dit.flash_attention_sequence_parallelism = _flash_attention_sequence_parallelism_Npu
     log_replace_info("flash_attention_sequence_parallelism", "flash_attention_sequence_parallelism_Npu")
 
-
-

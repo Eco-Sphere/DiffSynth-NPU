@@ -19,3 +19,4 @@ class TorchFloat64To32Feature(DiffSynthFeature):
 def replace_patch_torch_float64_to_float32():
     patch_torch_float64_to_float32()
     log_replace_info("torch.float64", "replace_patch_torch_float64_to_float32")
+
