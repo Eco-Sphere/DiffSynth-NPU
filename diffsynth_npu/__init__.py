@@ -1,2 +1,1 @@
-# import pack
-from .diffsynth_npu import *
+# Diffsynth NPU is a package that provides a way to use DiffSynth on NPU.

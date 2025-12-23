@@ -8,9 +8,6 @@ from peft import LoraConfig, inject_adapter_in_model
 import torchvision
 from PIL import Image
 
-import diffsynth_npu
-from diffsynth_npu.utils.patch_utils import replace_npu_patch
-
 
 class TextVideoDataset(torch.utils.data.Dataset):
     def __init__(self, base_path, metadata_path, max_num_frames=81, frame_interval=1, num_frames=81, height=480,
@@ -534,9 +531,7 @@ def train(args):
 
 if __name__ == '__main__':
     # 替换npu patch
-    from diffsynth_npu.wan_train import NPU_OPTIM_MAP
-    optim_modules = ["npu_rope_apply", "npu_rms_norm", "WanModel", "SelfAttention", "CrossAttention", "flash_attention_sequence_parallelism"]
-    replace_npu_patch(NPU_OPTIM_MAP, optim_modules)
+    import diffsynth_npu.npu_adaptor
 
     args = parse_args()
     if args.task == "data_process":

@@ -138,7 +138,7 @@ pip install -e ./
 ### 5.3 使用方式
 ```shell
 import diffsynth
-import diffsynth_npu
+import diffsynth_npu.npu_adaptor
 
 ...
 ```

@@ -1,5 +1,5 @@
-from logger import init_logger
-from device_utils import is_npu_available
+from diffsynth_npu.utils.logger import init_logger
+from diffsynth_npu.utils.device_utils import is_npu_available
 
 logger = init_logger(__name__)
 
@@ -23,3 +23,4 @@ def replace_npu_patch(npu_patch_map, optim_modules: dict = None):
                 logger.warning(f"Apply {module} failed, will still use original module")
     else:
         logger.warning("NPU is unavailable, will not apply npu optimizations")
+

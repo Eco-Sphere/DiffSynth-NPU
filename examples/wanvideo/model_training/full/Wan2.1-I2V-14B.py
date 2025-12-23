@@ -10,9 +10,6 @@ from PIL import Image
 import numpy as np
 import json
 
-import diffsynth_npu
-from diffsynth_npu.utils.patch_utils import replace_npu_patch
-
     ### SP 通信适配
 from diffsynth_npu.wan_train.parallel_states import initialize_sequence_parallel_state, \
     destroy_sequence_parallel_group, get_sequence_parallel_state, set_sequence_parallel_state, \
@@ -621,9 +618,9 @@ def train(args):
 
 ARGS = []
 if __name__ == '__main__':
-    from diffsynth_npu.wan_train import NPU_OPTIM_MAP
-    optim_modules = ["npu_rope_apply", "npu_rms_norm", "WanModel", "SelfAttention", "CrossAttention", "flash_attention_sequence_parallelism"]
-    replace_npu_patch(NPU_OPTIM_MAP, optim_modules)
+
+    import diffsynth_npu.npu_adaptor
+    
     args = parse_args()
     ARGS = args
     if args.task == "data_process":
